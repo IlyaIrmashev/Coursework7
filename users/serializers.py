@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Сериализатор пользователя"""
     class Meta:
         model = User
-        fields = ('id', 'username', 'tg_user_id', 'firs_name', 'last_name', 'is_active',)
+        fields = ('id', 'username', 'tg_user_id', 'last_name', 'is_active', 'password')
 
 
 class UserCreateSerializer(serializers.Serializer):
@@ -18,7 +18,8 @@ class UserCreateSerializer(serializers.Serializer):
     def save(self, **kwargs):
         user = User(
             username=self.validated_data['username'],
-            is_active=False
+            is_active=False,
+            password=self.validated_data['password']
         )
         user.save()
 
