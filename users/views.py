@@ -8,7 +8,19 @@ from users.serializers import UserCreateSerializer, UserSerializer
 
 class UsersCreateView(generics.CreateAPIView):
     """Контроллер создания пользователя"""
+    queryset = User.objects.all()
     serializer_class = UserCreateSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = UserCreateSerializer(data=request.data)
+        data = {}
+        if serializer.is_valid():
+            serializer.save()
+            data['response'] = True
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            data = serializer.errors
+            return Response(data)
 
 
 class UsersListView(generics.ListAPIView):
