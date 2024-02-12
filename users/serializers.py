@@ -10,18 +10,13 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'tg_user_id', 'last_name', 'is_active', 'password')
 
 
-class UserCreateSerializer(serializers.Serializer):
-    """Сериализатор создания пользователя"""
-    username = serializers.CharField(max_length=150)
-    description = serializers.SerializerMethodField(read_only=True)
+class UserCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
 
-    def save(self, **kwargs):
-        user = User(
-            username=self.validated_data['username'],
-            is_active=False,
-            password=self.validated_data['password']
-        )
-        user.save()
+    def create(self, validated_data):
+        validated_data['password'] = make_password(validated_data.get('password'))
+        return super().create(validated_data)
 
-    def get_description(self, instance):
-        return 'Учетная запись создана, вам нужно ее активировать через телеграм бот нажав /start!'
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'tg_user_id']
