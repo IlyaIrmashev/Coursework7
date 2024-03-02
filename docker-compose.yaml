@@ -1,70 +1,58 @@
-version: '3.11'
+version: '3.9'
 
 services:
 
   redis:
-    image: redis
-    ports:
-      - '6379:6379'
+    image: redis:7.2.2-alpine
+    container_name: redis
+    expose:
+      - 6379
+    volumes:
+      - redis_data:/data
+
+  db:
+    image: postgres:14.7-alpine
+    container_name: db
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   app:
+    container_name: app
     build: .
-    tty: true
     env_file:
       - .env
     command: >
       bash -c "python manage.py makemigrations
       && python manage.py migrate
-      && python manage.py collectstatic --noinput
-      && python manage.py csu
-      && python manage.py runserver"
-    volumes:
-      - .:/app
+      && python manage.py runserver 0.0.0.0:8000"
     ports:
-      - '8000:8000'
-    depends_on:
-      db:
-        condition: service_healthy
-
-  db:
-    image: postgres:16
-    env_file:
-      - .env
-    volumes:
-      - pg_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_PASSWORD=mysecretpassword
-      - PGDATA=/var/lib/postgresql/data/pgdata
-    ports:
-      - '5432:5432'
-    healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -d postgres -U postgres' ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - '8080:8000'
 
   celery:
     build: .
-    tty: true
-    command: celery -A config worker -l INFO
-    depends_on:
+    container_name: celery
+    command: >
+      bash -c "celery -A config worker --beat --loglevel=info"
+    volumes:
+      - .:/code
+    links:
       - redis
-      - app
-      - db
-    restart: on-failure
-
-  celery_beat:
-    build: .
-    tty: true
-    command: celery -A config beat -l info -S django
     depends_on:
-      - redis
       - app
-      - db
-    restart: on-failure
+      - redis
 
 
 volumes:
-  pg_data:
+  postgres_data:
+  redis_data:
 
 
